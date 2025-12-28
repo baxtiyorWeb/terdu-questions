@@ -23,7 +23,7 @@ function getAuthToken() {
 }
 
 export const api = axios.create({
-  baseURL: "terdu-qustions.vercel.app",
+  baseURL: "https://terdu-qustions.vercel.app",
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
