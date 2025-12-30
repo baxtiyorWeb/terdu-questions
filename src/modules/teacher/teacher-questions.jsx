@@ -37,11 +37,10 @@ const TeacherQuestions = () => {
   const [copiedCategory, setCopiedCategory] = useState(null);
   const [copiedAll, setCopiedAll] = useState(false);
 
-  // Joriy sahifa URL
+  // Joriy sahifa URL — categoryId orqali testga o'tish
   const baseTestUrl = window.location.origin + "/questions";
-  const getCategoryTestUrl = (categoryName) => {
-    const slug = categoryName.toLowerCase().replace(/\s+/g, "-");
-    return `${baseTestUrl}/${slug}`;
+  const getCategoryTestUrl = (categoryId) => {
+    return `${baseTestUrl}/${categoryId}`; // Endi faqat ID ishlatiladi
   };
 
   // Kategoriyalarni yuklash
@@ -74,9 +73,9 @@ const TeacherQuestions = () => {
     fetchQuestions();
   }, []);
 
-  // Kategoriya linkini nusxalash
+  // Kategoriya linkini nusxalash (ID orqali)
   const handleCopyCategoryLink = (category) => {
-    const testUrl = getCategoryTestUrl(category.name);
+    const testUrl = getCategoryTestUrl(category.id);
     navigator.clipboard.writeText(testUrl).then(() => {
       setCopiedCategory(category.id);
       message.success(`${category.name} testi havolasi nusxalandi!`);
@@ -87,7 +86,7 @@ const TeacherQuestions = () => {
   // Barcha kategoriyalar linkini nusxalash
   const handleCopyAllLinks = () => {
     const links = categories
-      .map((cat) => `${cat.name}: ${getCategoryTestUrl(cat.name)}`)
+      .map((cat) => `${cat.name}: ${getCategoryTestUrl(cat.id)}`)
       .join("\n");
     navigator.clipboard.writeText(links).then(() => {
       setCopiedAll(true);
@@ -167,24 +166,25 @@ const TeacherQuestions = () => {
     },
     {
       title: "Kategoriya",
-      dataIndex: ["category", "name"],
       key: "category",
-      width: 150,
-      render: (text, record) => (
+      width: 200,
+      render: (_, record) => (
         <Space>
-          <span>{text}</span>
-          <Button
-            size="small"
-            icon={
-              copiedCategory === record.category.id ? (
-                <CheckOutlined />
-              ) : (
-                <CopyOutlined />
-              )
-            }
-            onClick={() => handleCopyCategoryLink(record.category)}
-            title={`"${record.category.name}" test havolasini nusxalash`}
-          />
+          <span>{record.category?.name || "-"}</span>
+          {record.category && (
+            <Button
+              size="small"
+              icon={
+                copiedCategory === record.category.id ? (
+                  <CheckOutlined />
+                ) : (
+                  <CopyOutlined />
+                )
+              }
+              onClick={() => handleCopyCategoryLink(record.category)}
+              title={`"${record.category.name}" test havolasini nusxalash`}
+            />
+          )}
         </Space>
       ),
     },
@@ -238,7 +238,7 @@ const TeacherQuestions = () => {
         <div>
           <h2 style={{ margin: 0 }}>Savollar boshqaruvi</h2>
           <p style={{ color: "#666", margin: 4, fontSize: 14 }}>
-            O'quvchilar uchun test linklarini quyidagi jadvaldan nusxalang
+            O'quvchilarga test linklarini quyidagi jadvaldan nusxalang
           </p>
         </div>
 
@@ -268,12 +268,12 @@ const TeacherQuestions = () => {
         <Skeleton active />
       ) : (
         <>
-          {/* Kategoriyalar linklari jadvali */}
+          {/* Kategoriyalar uchun qisqa va toza linklar */}
           {categories.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <h3 style={{ marginBottom: 12, color: "#1890ff" }}>
                 <LinkOutlined style={{ marginRight: 8 }} />
-                Test linklari (o'quvchilarga ulashing)
+                Test linklari (o'quvchilarga yuboring)
               </h3>
               <div
                 style={{
@@ -284,7 +284,7 @@ const TeacherQuestions = () => {
                 }}
               >
                 {categories.map((cat) => {
-                  const testUrl = getCategoryTestUrl(cat.name);
+                  const testUrl = getCategoryTestUrl(cat.id);
                   return (
                     <div
                       key={cat.id}
@@ -292,19 +292,22 @@ const TeacherQuestions = () => {
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
-                        padding: "8px 12px",
+                        padding: "10px 14px",
                         marginBottom: 8,
                         background: "#fff",
-                        borderRadius: 6,
-                        borderLeft: "3px solid #1890ff",
+                        borderRadius: 8,
+                        borderLeft: "4px solid #1890ff",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                       }}
                     >
                       <div>
-                        <strong>{cat.name}</strong>
+                        <strong style={{ fontSize: 15 }}>{cat.name}</strong>
                         <div
                           style={{
-                            fontSize: 12,
-                            color: "#666",
+                            fontSize: 13,
+                            color: "#333",
+                            marginTop: 4,
+                            fontFamily: "monospace",
                             wordBreak: "break-all",
                           }}
                         >
@@ -312,7 +315,8 @@ const TeacherQuestions = () => {
                         </div>
                       </div>
                       <Button
-                        size="small"
+                        size="middle"
+                        type="primary"
                         icon={
                           copiedCategory === cat.id ? (
                             <CheckOutlined />
@@ -322,12 +326,10 @@ const TeacherQuestions = () => {
                         }
                         onClick={() => handleCopyCategoryLink(cat)}
                         style={{
-                          background:
-                            copiedCategory === cat.id ? "#52c41a" : "#f0f0f0",
-                          color: copiedCategory === cat.id ? "#fff" : "#000",
+                          minWidth: 90,
                         }}
                       >
-                        {copiedCategory === cat.id ? "Nusxal" : "Copy"}
+                        {copiedCategory === cat.id ? "Nusxalandi" : "Nusxalash"}
                       </Button>
                     </div>
                   );
@@ -364,10 +366,7 @@ const TeacherQuestions = () => {
             label="Savol matni"
             rules={[{ required: true, message: "Savol matnini kiriting!" }]}
           >
-            <TextArea
-              rows={3}
-              placeholder="Masalan: O'zbek tilida qaysi tovush undosh hisoblanadi?"
-            />
+            <TextArea rows={3} placeholder="Savol matnini kiriting..." />
           </Form.Item>
 
           <Form.Item
@@ -384,7 +383,7 @@ const TeacherQuestions = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item label="Javob variantlari (agar variantli savol bo'lsa)">
+          <Form.Item label="Javob variantlari (variantli savol uchun)">
             <Form.List name="options">
               {(fields, { add, remove }) => (
                 <>
@@ -402,10 +401,7 @@ const TeacherQuestions = () => {
                         {...restField}
                         name={[name]}
                         rules={[
-                          {
-                            required: true,
-                            message: "Variant matnini kiriting",
-                          },
+                          { required: true, message: "Variantni kiriting" },
                         ]}
                         style={{ flex: 1 }}
                       >
@@ -454,7 +450,7 @@ const TeacherQuestions = () => {
                         (o) => o && o.trim()
                       ).length - 1
                     }
-                    placeholder="Masalan: 0 (birinchi variant)"
+                    placeholder="Masalan: 0"
                   />
                 </Form.Item>
               ) : (
@@ -462,15 +458,12 @@ const TeacherQuestions = () => {
                   name="correctTextAnswer"
                   label="To'g'ri matnli javob"
                   rules={[
-                    {
-                      required: true,
-                      message: "Matnli javob uchun to'g'ri javobni kiriting!",
-                    },
+                    { required: true, message: "To'g'ri javobni kiriting!" },
                   ]}
                 >
                   <TextArea
                     rows={2}
-                    placeholder="Talaba yozishi kerak bo'lgan to'g'ri javob"
+                    placeholder="Talaba yozishi kerak bo'lgan javob"
                   />
                 </Form.Item>
               );
