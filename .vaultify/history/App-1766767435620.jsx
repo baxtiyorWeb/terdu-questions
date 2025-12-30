@@ -28,7 +28,7 @@ function App() {
       {/* Talaba va umumiy sahifalar */}
       <Route path="/" element={<Home />} />
       <Route path="/questions" element={<QuestionPage />} />
-      <Route path="/questions/:categoryName" element={<QuestionPage />} />
+      <Route path="/questions/:categoryId" element={<QuestionPage />} />
 
       {/* O'qituvchi paneli */}
       <Route

@@ -23,11 +23,14 @@ import { get } from "lodash";
 const TEST_DURATION = 15 * 60; // 15 daqiqa
 
 const Questions = () => {
-  const { categoryName } = useParams();
+  // Endi URLdan categoryId (raqam) olinadi
+  const { categoryId: urlCategoryId } = useParams(); // :categoryId sifatida route o'zgartirilgan bo'lishi kerak
   const navigate = useNavigate();
   const user = getUserFromToken();
 
-  const [step, setStep] = useState("loading");
+  const [step, setStep] = useState(
+    urlCategoryId ? "loading" : "select_category"
+  );
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -44,12 +47,10 @@ const Questions = () => {
 
   const currentUrl = window.location.href;
 
-  const startTestByCategoryName = useCallback(
-    async (catName, categoriesList) => {
-      const category = categoriesList.find(
-        (c) =>
-          c.name.toLowerCase().replace(/\s+/g, "-") === catName.toLowerCase()
-      );
+  // categoryId orqali testni boshlash
+  const startTestByCategoryId = useCallback(
+    async (catId, categoriesList) => {
+      const category = categoriesList.find((c) => c.id === parseInt(catId));
 
       if (!category) {
         toast.error("Kategoriya topilmadi.");
@@ -90,6 +91,7 @@ const Questions = () => {
     [navigate]
   );
 
+  // Kategoriyalarni yuklash va URLdan ID bo'lsa — avto boshlash
   useEffect(() => {
     const fetchCategories = async () => {
       setLoading(true);
@@ -97,8 +99,8 @@ const Questions = () => {
         const res = await api.get("/categories");
         setCategories(res.data);
 
-        if (categoryName) {
-          await startTestByCategoryName(categoryName, res.data);
+        if (urlCategoryId) {
+          await startTestByCategoryId(urlCategoryId, res.data);
         } else {
           setStep("select_category");
         }
@@ -111,8 +113,9 @@ const Questions = () => {
     };
 
     fetchCategories();
-  }, [categoryName, startTestByCategoryName]);
+  }, [urlCategoryId, startTestByCategoryId]);
 
+  // Timer
   useEffect(() => {
     if (step === "test" && timeLeft > 0 && questions.length > 0) {
       const timer = setInterval(() => {
@@ -129,9 +132,9 @@ const Questions = () => {
     }
   }, [step, timeLeft, questions.length]);
 
+  // Kategoriya tanlanganda — ID orqali yo'naltirish
   const handleCategorySelect = (category) => {
-    const slug = category.name.toLowerCase().replace(/\s+/g, "-");
-    navigate(`/questions/${slug}`);
+    navigate(`/questions/${category.id}`); // Endi faqat ID ishlatiladi
   };
 
   const handleAnswerChange = (value) => {
@@ -186,7 +189,6 @@ const Questions = () => {
 
         setFullQuestions(orderedFullQuestions);
       } catch (err) {
-        console.log(err)
         setFullQuestions([]);
       }
 
@@ -247,7 +249,7 @@ const Questions = () => {
 
       <div className="min-h-screen bg-gray-50 py-8 px-4">
         <div className="max-w-4xl mx-auto">
-          {/* Ulashish tugmasi */}
+          {/* Ulashish tugmasi — faqat test yoki natija sahifasida */}
           {(step === "test" || step === "result") && selectedCategory && (
             <div className="flex justify-end mb-4">
               <button
@@ -266,7 +268,7 @@ const Questions = () => {
           )}
 
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            {/* Kategoriya tanlash */}
+            {/* Kategoriya tanlash sahifasi */}
             {step === "select_category" && (
               <div className="p-8">
                 <div className="text-center mb-8">
@@ -312,10 +314,9 @@ const Questions = () => {
               </div>
             )}
 
-            {/* Test va Natija */}
+            {/* Test va Natija sahifalari */}
             {(step === "test" || step === "result") && selectedCategory && (
               <>
-                {/* Header */}
                 <div className="bg-blue-600 px-6 py-4 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -335,7 +336,6 @@ const Questions = () => {
                   </div>
                 </div>
 
-                {/* Progress bar */}
                 {step === "test" && (
                   <div className="h-2 bg-gray-200">
                     <div
@@ -359,7 +359,6 @@ const Questions = () => {
                         {questions[currentIndex].question}
                       </h3>
 
-                      {/* Variantli savollar */}
                       {questions[currentIndex].options &&
                       questions[currentIndex].options.length > 0 ? (
                         <div className="space-y-3">
@@ -422,7 +421,7 @@ const Questions = () => {
                     </>
                   )}
 
-                  {/* Natija */}
+                  {/* Natija sahifasi */}
                   {step === "result" && result && (
                     <div className="space-y-8">
                       <h2 className="text-2xl font-bold text-center text-gray-800">
