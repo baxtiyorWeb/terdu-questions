@@ -358,26 +358,31 @@ const Questions = () => {
                       <h3 className="text-xl font-medium text-gray-800 mb-8 leading-relaxed">
                         {questions[currentIndex].question}
                       </h3>
-
                       {questions[currentIndex].options &&
                       questions[currentIndex].options.length > 0 ? (
-                        <div className="space-y-3">
-                          {questions[currentIndex].options.map((opt, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => handleAnswerChange(idx)}
-                              className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
-                                answers[currentIndex]?.userAnswerIndex === idx
-                                  ? "bg-blue-100 border-blue-500 shadow-sm"
-                                  : "bg-gray-50 border-gray-300 hover:bg-gray-100"
-                              }`}
-                            >
-                              <span className="font-medium text-blue-700 mr-3">
-                                {/* {String.fromCharCode(65 + idx)}. */}
-                              </span>
-                              {opt}
-                            </button>
-                          ))}
+                        <div className="space-y-4">
+                          {questions[currentIndex].options.map((opt, idx) => {
+                            const cleanText = opt
+                              .replace(/^[A-D]\)\s*/, "")
+                              .trim();
+
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => handleAnswerChange(idx)}
+                                className={`w-full p-5 text-left rounded-xl border-2 transition-all flex items-start gap-4 ${
+                                  answers[currentIndex]?.userAnswerIndex === idx
+                                    ? "bg-blue-100 border-blue-500 shadow-md"
+                                    : "bg-gray-50 border-gray-300 hover:bg-gray-100 hover:border-blue-300"
+                                }`}
+                              >
+                                {/* Toza matn — endi verguldan keyin pastga tushmaydi */}
+                                <span className="text-lg text-gray-800 leading-relaxed pt-1">
+                                  {cleanText}
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
                       ) : (
                         <input
@@ -441,68 +446,7 @@ const Questions = () => {
                         </div>
                       </div>
 
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-gray-800">
-                          Javoblar tahlili
-                        </h3>
-
-                        {result.detailedAnswers.map((detailedAns, idx) => {
-                          const q =
-                            getQuestionByAnswer(detailedAns) || questions[idx];
-                          if (!q) return null;
-
-                          let isCorrect = detailedAns.isCorrect;
-                          if (isCorrect === undefined) {
-                            if (q.options && q.options.length > 0) {
-                              isCorrect =
-                                detailedAns.userAnswerIndex ===
-                                q.correctAnswerIndex;
-                            } else {
-                              isCorrect =
-                                detailedAns.userAnswerText
-                                  ?.trim()
-                                  .toLowerCase() ===
-                                q.correctTextAnswer?.trim().toLowerCase();
-                            }
-                          }
-
-                          const userAnswerText = getUserAnswerDisplay(
-                            q,
-                            detailedAns
-                          );
-                          const correctAnswerText = getCorrectAnswerDisplay(q);
-
-                          return (
-                            <div
-                              key={idx}
-                              className={`p-5 rounded-lg border-l-4 ${
-                                isCorrect
-                                  ? "bg-green-50 border-green-500"
-                                  : "bg-red-50 border-red-500"
-                              }`}
-                            >
-                              <p className="font-medium text-gray-800 mb-2">
-                                {idx + 1}. {q.question}
-                              </p>
-                              <p className="text-sm">
-                                <strong>Siz:</strong> {userAnswerText}
-                              </p>
-                              {!isCorrect && (
-                                <p className="text-sm text-green-700 mt-1">
-                                  <strong>To'g'ri:</strong> {correctAnswerText}
-                                </p>
-                              )}
-                              <div className="mt-3">
-                                {isCorrect ? (
-                                  <CheckCircle className="w-6 h-6 text-green-600" />
-                                ) : (
-                                  <XCircle className="w-6 h-6 text-red-600" />
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                     
 
                       <button
                         onClick={() => navigate("/questions")}
