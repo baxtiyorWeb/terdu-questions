@@ -373,7 +373,7 @@ const Questions = () => {
                               }`}
                             >
                               <span className="font-medium text-blue-700 mr-3">
-                                {String.fromCharCode(65 + idx)}.
+                                {/* {String.fromCharCode(65 + idx)}. */}
                               </span>
                               {opt}
                             </button>
