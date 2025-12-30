@@ -445,9 +445,6 @@ const Questions = () => {
                           Vaqt: {formatTime(result.timeSpent)}
                         </div>
                       </div>
-
-                     
-
                       <button
                         onClick={() => navigate("/questions")}
                         className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
