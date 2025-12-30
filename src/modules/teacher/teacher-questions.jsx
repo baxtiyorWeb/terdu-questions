@@ -13,7 +13,15 @@ import {
   Tag,
   InputNumber,
 } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  CopyOutlined,
+  ShareAltOutlined,
+  LinkOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  CheckOutlined,
+} from "@ant-design/icons";
 import { api } from "../../../api/api";
 
 const { TextArea } = Input;
@@ -26,6 +34,15 @@ const TeacherQuestions = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [form] = Form.useForm();
+  const [copiedCategory, setCopiedCategory] = useState(null);
+  const [copiedAll, setCopiedAll] = useState(false);
+
+  // Joriy sahifa URL
+  const baseTestUrl = window.location.origin + "/questions";
+  const getCategoryTestUrl = (categoryName) => {
+    const slug = categoryName.toLowerCase().replace(/\s+/g, "-");
+    return `${baseTestUrl}/${slug}`;
+  };
 
   // Kategoriyalarni yuklash
   const fetchCategories = async () => {
@@ -57,10 +74,31 @@ const TeacherQuestions = () => {
     fetchQuestions();
   }, []);
 
+  // Kategoriya linkini nusxalash
+  const handleCopyCategoryLink = (category) => {
+    const testUrl = getCategoryTestUrl(category.name);
+    navigator.clipboard.writeText(testUrl).then(() => {
+      setCopiedCategory(category.id);
+      message.success(`${category.name} testi havolasi nusxalandi!`);
+      setTimeout(() => setCopiedCategory(null), 2000);
+    });
+  };
+
+  // Barcha kategoriyalar linkini nusxalash
+  const handleCopyAllLinks = () => {
+    const links = categories
+      .map((cat) => `${cat.name}: ${getCategoryTestUrl(cat.name)}`)
+      .join("\n");
+    navigator.clipboard.writeText(links).then(() => {
+      setCopiedAll(true);
+      message.success("Barcha kategoriyalar linklari nusxalandi!");
+      setTimeout(() => setCopiedAll(false), 2000);
+    });
+  };
+
   const handleSubmit = async (values) => {
     setTableLoading(true);
     try {
-      // Variantlarni tozalash (bo'sh qatorlarni olib tashlash)
       if (values.options) {
         values.options = values.options.filter(
           (opt) => opt && opt.trim() !== ""
@@ -132,6 +170,23 @@ const TeacherQuestions = () => {
       dataIndex: ["category", "name"],
       key: "category",
       width: 150,
+      render: (text, record) => (
+        <Space>
+          <span>{text}</span>
+          <Button
+            size="small"
+            icon={
+              copiedCategory === record.category.id ? (
+                <CheckOutlined />
+              ) : (
+                <CopyOutlined />
+              )
+            }
+            onClick={() => handleCopyCategoryLink(record.category)}
+            title={`"${record.category.name}" test havolasini nusxalash`}
+          />
+        </Space>
+      ),
     },
     {
       title: "Amallar",
@@ -176,33 +231,120 @@ const TeacherQuestions = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          flexWrap: "wrap",
+          gap: 8,
         }}
       >
-        <h2>Savollar</h2>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setEditingQuestion(null);
-            form.resetFields();
-            setIsModalOpen(true);
-          }}
-        >
-          Yangi savol qo'shish
-        </Button>
+        <div>
+          <h2 style={{ margin: 0 }}>Savollar boshqaruvi</h2>
+          <p style={{ color: "#666", margin: 4, fontSize: 14 }}>
+            O'quvchilar uchun test linklarini quyidagi jadvaldan nusxalang
+          </p>
+        </div>
+
+        <Space>
+          <Button
+            icon={<ShareAltOutlined />}
+            onClick={handleCopyAllLinks}
+            type={copiedAll ? "primary" : "default"}
+          >
+            Barcha linklarni nusxalash
+          </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setEditingQuestion(null);
+              form.resetFields();
+              setIsModalOpen(true);
+            }}
+          >
+            Yangi savol
+          </Button>
+        </Space>
       </div>
 
       {loading ? (
         <Skeleton active />
       ) : (
-        <Table
-          columns={columns}
-          dataSource={questions}
-          rowKey="id"
-          loading={tableLoading}
-          pagination={{ pageSize: 10 }}
-          scroll={{ x: 1000 }}
-        />
+        <>
+          {/* Kategoriyalar linklari jadvali */}
+          {categories.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ marginBottom: 12, color: "#1890ff" }}>
+                <LinkOutlined style={{ marginRight: 8 }} />
+                Test linklari (o'quvchilarga ulashing)
+              </h3>
+              <div
+                style={{
+                  background: "#f0f5ff",
+                  padding: 16,
+                  borderRadius: 8,
+                  border: "1px solid #bae7ff",
+                }}
+              >
+                {categories.map((cat) => {
+                  const testUrl = getCategoryTestUrl(cat.name);
+                  return (
+                    <div
+                      key={cat.id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "8px 12px",
+                        marginBottom: 8,
+                        background: "#fff",
+                        borderRadius: 6,
+                        borderLeft: "3px solid #1890ff",
+                      }}
+                    >
+                      <div>
+                        <strong>{cat.name}</strong>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "#666",
+                            wordBreak: "break-all",
+                          }}
+                        >
+                          {testUrl}
+                        </div>
+                      </div>
+                      <Button
+                        size="small"
+                        icon={
+                          copiedCategory === cat.id ? (
+                            <CheckOutlined />
+                          ) : (
+                            <CopyOutlined />
+                          )
+                        }
+                        onClick={() => handleCopyCategoryLink(cat)}
+                        style={{
+                          background:
+                            copiedCategory === cat.id ? "#52c41a" : "#f0f0f0",
+                          color: copiedCategory === cat.id ? "#fff" : "#000",
+                        }}
+                      >
+                        {copiedCategory === cat.id ? "Nusxal" : "Copy"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <Table
+            columns={columns}
+            dataSource={questions}
+            rowKey="id"
+            loading={tableLoading}
+            pagination={{ pageSize: 10 }}
+            scroll={{ x: 1200 }}
+          />
+        </>
       )}
 
       <Modal
@@ -247,7 +389,15 @@ const TeacherQuestions = () => {
               {(fields, { add, remove }) => (
                 <>
                   {fields.map(({ key, name, ...restField }) => (
-                    <Space key={key} align="baseline">
+                    <Space
+                      key={key}
+                      align="baseline"
+                      style={{
+                        display: "flex",
+                        marginBottom: 8,
+                        width: "100%",
+                      }}
+                    >
                       <Form.Item
                         {...restField}
                         name={[name]}
@@ -257,6 +407,7 @@ const TeacherQuestions = () => {
                             message: "Variant matnini kiriting",
                           },
                         ]}
+                        style={{ flex: 1 }}
                       >
                         <Input placeholder={`Variant ${name + 1}`} />
                       </Form.Item>
