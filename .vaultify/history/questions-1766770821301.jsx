@@ -13,6 +13,7 @@ import {
   Share2,
   Copy,
   Check,
+  LogOut,
 } from "lucide-react";
 import { api } from "../../api/api";
 import { toast, ToastContainer } from "react-toastify";
@@ -23,8 +24,7 @@ import { get } from "lodash";
 const TEST_DURATION = 15 * 60; // 15 daqiqa
 
 const Questions = () => {
-  // Endi URLdan categoryId (raqam) olinadi
-  const { categoryId: urlCategoryId } = useParams(); // :categoryId sifatida route o'zgartirilgan bo'lishi kerak
+  const { categoryId: urlCategoryId } = useParams();
   const navigate = useNavigate();
   const user = getUserFromToken();
 
@@ -47,7 +47,14 @@ const Questions = () => {
 
   const currentUrl = window.location.href;
 
-  // categoryId orqali testni boshlash
+  // Logout funksiyasi
+  const handleLogout = () => {
+    localStorage.removeItem("student_access_token"); // yoki qaysi storage ishlatayotgan bo'lsangiz
+    localStorage.removeItem("teacher_access_token"); // yoki qaysi storage ishlatayotgan bo'lsangiz
+    toast.success("Muvaffaqiyatli chiqdingiz!");
+    navigate("/login"); // login sahifasiga yo'naltirish
+  };
+
   const startTestByCategoryId = useCallback(
     async (catId, categoriesList) => {
       const category = categoriesList.find((c) => c.id === parseInt(catId));
@@ -91,7 +98,6 @@ const Questions = () => {
     [navigate]
   );
 
-  // Kategoriyalarni yuklash va URLdan ID bo'lsa — avto boshlash
   useEffect(() => {
     const fetchCategories = async () => {
       setLoading(true);
@@ -115,7 +121,6 @@ const Questions = () => {
     fetchCategories();
   }, [urlCategoryId, startTestByCategoryId]);
 
-  // Timer
   useEffect(() => {
     if (step === "test" && timeLeft > 0 && questions.length > 0) {
       const timer = setInterval(() => {
@@ -132,9 +137,8 @@ const Questions = () => {
     }
   }, [step, timeLeft, questions.length]);
 
-  // Kategoriya tanlanganda — ID orqali yo'naltirish
   const handleCategorySelect = (category) => {
-    navigate(`/questions/${category.id}`); // Endi faqat ID ishlatiladi
+    navigate(`/questions/${category.id}`);
   };
 
   const handleAnswerChange = (value) => {
@@ -217,87 +221,79 @@ const Questions = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getCorrectAnswerDisplay = (q) => {
-    if (q.options && q.options.length > 0) {
-      if (q.correctAnswerIndex !== null && q.correctAnswerIndex !== undefined) {
-        const char = String.fromCharCode(65 + q.correctAnswerIndex);
-        return `${char}. ${q.options[q.correctAnswerIndex]}`;
-      }
-      return "Noma'lum";
-    }
-    return q.correctTextAnswer || "Noma'lum";
-  };
-
-  const getUserAnswerDisplay = (q, detailedAns) => {
-    if (q.options && q.options.length > 0) {
-      const index = detailedAns.userAnswerIndex;
-      if (index !== undefined && index >= 0 && index < q.options.length) {
-        return `${String.fromCharCode(65 + index)}. ${q.options[index]}`;
-      }
-      return "Javob berilmagan";
-    }
-    return detailedAns.userAnswerText?.trim() || "Javob berilmagan";
-  };
-
-  const getQuestionByAnswer = (detailedAns) => {
-    return fullQuestions.find((q) => q.id === detailedAns.questionId);
-  };
-
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} theme="light" />
 
-      <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="min-h-screen bg-gray-50 py-6 px-4 sm:py-8">
         <div className="max-w-4xl mx-auto">
-          {/* Ulashish tugmasi — faqat test yoki natija sahifasida */}
-          {(step === "test" || step === "result") && selectedCategory && (
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={handleCopyLink}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow transition text-sm font-medium text-gray-700"
-              >
-                <Share2 className="w-4 h-4 text-blue-600" />
-                Ulashish
-                {copied ? (
-                  <Check className="w-4 h-4 text-green-600 ml-1" />
-                ) : (
-                  <Copy className="w-4 h-4 text-gray-500 ml-1" />
-                )}
-              </button>
+          {/* Yuqori qism: Ulashish + Logout */}
+          {(step === "test" ||
+            step === "result" ||
+            step === "select_category") && (
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              {/* Ulashish tugmasi */}
+              {(step === "test" || step === "result") && selectedCategory && (
+                <button
+                  onClick={handleCopyLink}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow transition text-sm font-medium text-gray-700"
+                >
+                  <Share2 className="w-4 h-4 text-blue-600" />
+                  <span className="hidden sm:inline">Ulashish</span>
+                  {copied ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Copy className="w-4 h-4 text-gray-500" />
+                  )}
+                </button>
+              )}
+
+              {/* Logout tugmasi - agar user bo'lsa */}
+              {user && (
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition text-sm font-medium ml-auto"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Chiqish</span>
+                </button>
+              )}
             </div>
           )}
 
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            {/* Kategoriya tanlash sahifasi */}
+            {/* Kategoriya tanlash */}
             {step === "select_category" && (
-              <div className="p-8">
+              <div className="p-6 sm:p-8">
                 <div className="text-center mb-8">
-                  <BookOpen className="w-12 h-12 text-blue-600 mx-auto mb-3" />
-                  <h1 className="text-2xl font-bold text-gray-800">
+                  <BookOpen className="w-10 h-10 sm:w-12 sm:h-12 text-blue-600 mx-auto mb-3" />
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
                     Test tizimiga xush kelibsiz
                   </h1>
-                  <p className="text-gray-600 mt-2">Kategoriyani tanlang</p>
+                  <p className="text-gray-600 mt-2 text-sm sm:text-base">
+                    Kategoriyani tanlang
+                  </p>
                 </div>
 
                 {loading ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
                       <div
                         key={i}
-                        className="bg-gray-200 animate-pulse rounded-lg h-32"
+                        className="bg-gray-200 animate-pulse rounded-lg h-28 sm:h-32"
                       />
                     ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                     {categories.map((cat) => (
                       <button
                         key={cat.id}
                         onClick={() => handleCategorySelect(cat)}
-                        className="p-6 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 rounded-lg transition-all hover:border-blue-400 hover:shadow-md"
+                        className="p-4 sm:p-6 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 rounded-lg transition-all hover:border-blue-400 hover:shadow-md flex flex-col items-center"
                       >
-                        <BookMarked className="w-10 h-10 text-blue-600 mx-auto mb-3" />
-                        <h3 className="font-semibold text-gray-800">
+                        <BookMarked className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600 mb-2" />
+                        <h3 className="font-semibold text-gray-800 text-sm sm:text-base text-center">
                           {cat.name}
                         </h3>
                       </button>
@@ -307,28 +303,28 @@ const Questions = () => {
 
                 {categories.length === 0 && !loading && (
                   <div className="text-center py-10">
-                    <AlertCircle className="w-12 h-12 text-orange-500 mx-auto mb-3" />
+                    <AlertCircle className="w-10 h-10 sm:w-12 sm:h-12 text-orange-500 mx-auto mb-3" />
                     <p className="text-gray-600">Kategoriyalar mavjud emas</p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Test va Natija sahifalari */}
+            {/* Test va Natija */}
             {(step === "test" || step === "result") && selectedCategory && (
               <>
-                <div className="bg-blue-600 px-6 py-4 text-white">
-                  <div className="flex items-center justify-between">
+                <div className="bg-blue-600 px-4 sm:px-6 py-4 text-white">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <BookOpen className="w-6 h-6" />
-                      <h2 className="text-xl font-semibold">
+                      <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
+                      <h2 className="text-lg sm:text-xl font-semibold truncate max-w-full">
                         {selectedCategory.name}
                       </h2>
                     </div>
                     {step === "test" && (
-                      <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg">
-                        <Clock className="w-5 h-5" />
-                        <span className="font-mono text-lg">
+                      <div className="flex items-center gap-2 bg-white/20 px-3 sm:px-4 py-2 rounded-lg">
+                        <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <span className="font-mono text-base sm:text-lg">
                           {formatTime(timeLeft)}
                         </span>
                       </div>
@@ -345,22 +341,22 @@ const Questions = () => {
                   </div>
                 )}
 
-                <div className="p-6 md:p-8">
-                  {/* Test jarayoni */}
+                <div className="p-5 sm:p-8">
                   {step === "test" && questions.length > 0 && (
                     <>
                       <div className="text-center mb-6">
-                        <span className="text-lg font-semibold text-gray-700">
+                        <span className="text-base sm:text-lg font-semibold text-gray-700">
                           Savol {currentIndex + 1} / {questions.length}
                         </span>
                       </div>
 
-                      <h3 className="text-xl font-medium text-gray-800 mb-8 leading-relaxed">
+                      <h3 className="text-lg sm:text-xl font-medium text-gray-800 mb-6 sm:mb-8 leading-relaxed">
                         {questions[currentIndex].question}
                       </h3>
+
                       {questions[currentIndex].options &&
                       questions[currentIndex].options.length > 0 ? (
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                           {questions[currentIndex].options.map((opt, idx) => {
                             const cleanText = opt
                               .replace(/^[A-D]\)\s*/, "")
@@ -370,14 +366,13 @@ const Questions = () => {
                               <button
                                 key={idx}
                                 onClick={() => handleAnswerChange(idx)}
-                                className={`w-full p-5 text-left rounded-xl border-2 transition-all flex items-start gap-4 ${
+                                className={`w-full p-4 sm:p-5 text-left rounded-xl border-2 transition-all flex items-start gap-3 sm:gap-4 text-sm sm:text-base ${
                                   answers[currentIndex]?.userAnswerIndex === idx
                                     ? "bg-blue-100 border-blue-500 shadow-md"
                                     : "bg-gray-50 border-gray-300 hover:bg-gray-100 hover:border-blue-300"
                                 }`}
                               >
-                                {/* Toza matn — endi verguldan keyin pastga tushmaydi */}
-                                <span className="text-lg text-gray-800 leading-relaxed pt-1">
+                                <span className="text-gray-800 leading-relaxed">
                                   {cleanText}
                                 </span>
                               </button>
@@ -390,35 +385,35 @@ const Questions = () => {
                           value={answers[currentIndex]?.userAnswerText || ""}
                           onChange={(e) => handleAnswerChange(e.target.value)}
                           placeholder="Javobingizni yozing..."
-                          className="w-full p-4 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition"
+                          className="w-full p-3 sm:p-4 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition"
                         />
                       )}
 
-                      <div className="flex justify-between mt-8">
+                      <div className="flex flex-col sm:flex-row justify-between gap-4 mt-8">
                         <button
                           onClick={handlePrev}
                           disabled={currentIndex === 0}
-                          className="flex items-center gap-2 px-5 py-3 bg-gray-200 hover:bg-gray-300 rounded-lg disabled:opacity-50 transition"
+                          className="flex items-center justify-center gap-2 px-4 sm:px-5 py-3 bg-gray-200 hover:bg-gray-300 rounded-lg disabled:opacity-50 transition text-sm sm:text-base"
                         >
-                          <ArrowLeft className="w-5 h-5" />
+                          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                           Oldingi
                         </button>
 
                         {currentIndex < questions.length - 1 ? (
                           <button
                             onClick={handleNext}
-                            className="flex items-center gap-2 px-5 py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition"
+                            className="flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition text-sm sm:text-base order-first sm:order-none"
                           >
                             Keyingi
-                            <ArrowRight className="w-5 h-5" />
+                            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
                           </button>
                         ) : (
                           <button
                             onClick={() => handleSubmit(timeLeft)}
                             disabled={loading}
-                            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white hover:bg-green-700 rounded-lg font-medium transition disabled:opacity-70"
+                            className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white hover:bg-green-700 rounded-lg font-medium transition disabled:opacity-70 text-sm sm:text-base"
                           >
-                            <Send className="w-5 h-5" />
+                            <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                             Yakunlash
                           </button>
                         )}
@@ -426,28 +421,31 @@ const Questions = () => {
                     </>
                   )}
 
-                  {/* Natija sahifasi */}
+                  {/* Natija */}
                   {step === "result" && result && (
-                    <div className="space-y-8">
-                      <h2 className="text-2xl font-bold text-center text-gray-800">
+                    <div className="space-y-8 text-center">
+                      <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
                         Test yakunlandi!
                       </h2>
 
-                      <div className="bg-blue-50 p-6 rounded-xl text-center">
-                        <div className="text-5xl font-bold text-blue-700">
+                      <div className="bg-blue-50 p-6 rounded-xl">
+                        <div className="text-4xl sm:text-5xl font-bold text-blue-700">
                           {result.score} / {result.total}
                         </div>
-                        <div className="text-3xl font-semibold text-blue-600 mt-2">
+                        <div className="text-2xl sm:text-3xl font-semibold text-blue-600 mt-2">
                           {result.percentage}%
                         </div>
                         <div className="text-gray-600 mt-4 flex items-center justify-center gap-2">
                           <Clock className="w-5 h-5" />
-                          Vaqt: {formatTime(result.timeSpent)}
+                          <span className="text-sm sm:text-base">
+                            Vaqt: {formatTime(result.timeSpent)}
+                          </span>
                         </div>
                       </div>
+
                       <button
                         onClick={() => navigate("/questions")}
-                        className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                        className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm sm:text-base"
                       >
                         Boshqa testga o'tish
                       </button>

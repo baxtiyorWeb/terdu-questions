@@ -12,6 +12,9 @@ import {
   Popconfirm,
   Tag,
   InputNumber,
+  Card,
+  Typography,
+  
 } from "antd";
 import {
   PlusOutlined,
@@ -21,10 +24,12 @@ import {
   EditOutlined,
   DeleteOutlined,
   CheckOutlined,
+  MobileOutlined,
 } from "@ant-design/icons";
 import { api } from "../../../api/api";
 
 const { TextArea } = Input;
+const { Title , Text} = Typography;
 
 const TeacherQuestions = () => {
   const [questions, setQuestions] = useState([]);
@@ -36,32 +41,34 @@ const TeacherQuestions = () => {
   const [form] = Form.useForm();
   const [copiedCategory, setCopiedCategory] = useState(null);
   const [copiedAll, setCopiedAll] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Joriy sahifa URL — categoryId orqali testga o'tish
   const baseTestUrl = window.location.origin + "/questions";
-  const getCategoryTestUrl = (categoryId) => {
-    return `${baseTestUrl}/${categoryId}`; // Endi faqat ID ishlatiladi
-  };
 
-  // Kategoriyalarni yuklash
+  const getCategoryTestUrl = (categoryId) => `${baseTestUrl}/${categoryId}`;
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const fetchCategories = async () => {
     try {
       const res = await api.get(`/categories`);
       setCategories(res.data);
     } catch (err) {
-      console.log(err);
       message.error("Kategoriyalarni yuklashda xato");
     }
   };
 
-  // Savollarni yuklash
   const fetchQuestions = async () => {
     setLoading(true);
     try {
       const res = await api.get(`/questions/all`);
       setQuestions(res.data);
     } catch (err) {
-      console.log(err);
       message.error("Savollarni yuklashda xato");
     } finally {
       setLoading(false);
@@ -73,7 +80,6 @@ const TeacherQuestions = () => {
     fetchQuestions();
   }, []);
 
-  // Kategoriya linkini nusxalash (ID orqali)
   const handleCopyCategoryLink = (category) => {
     const testUrl = getCategoryTestUrl(category.id);
     navigator.clipboard.writeText(testUrl).then(() => {
@@ -83,14 +89,13 @@ const TeacherQuestions = () => {
     });
   };
 
-  // Barcha kategoriyalar linkini nusxalash
   const handleCopyAllLinks = () => {
     const links = categories
       .map((cat) => `${cat.name}: ${getCategoryTestUrl(cat.id)}`)
       .join("\n");
     navigator.clipboard.writeText(links).then(() => {
       setCopiedAll(true);
-      message.success("Barcha kategoriyalar linklari nusxalandi!");
+      message.success("Barcha linklar nusxalandi!");
       setTimeout(() => setCopiedAll(false), 2000);
     });
   };
@@ -106,7 +111,7 @@ const TeacherQuestions = () => {
 
       if (editingQuestion) {
         await api.patch(`/questions/${editingQuestion.id}`, values);
-        message.success("Savol muvaffaqiyatli yangilandi");
+        message.success("Savol yangilandi");
       } else {
         await api.post(`/questions`, values);
         message.success("Yangi savol qo'shildi");
@@ -117,10 +122,7 @@ const TeacherQuestions = () => {
       setEditingQuestion(null);
       fetchQuestions();
     } catch (err) {
-      console.log(err);
-      const errorMsg =
-        err.response?.data?.message || "Saqlashda xatolik yuz berdi";
-      message.error(errorMsg);
+      message.error(err.response?.data?.message || "Xatolik yuz berdi");
     } finally {
       setTableLoading(false);
     }
@@ -133,7 +135,6 @@ const TeacherQuestions = () => {
       message.success("Savol o'chirildi");
       fetchQuestions();
     } catch (err) {
-      console.log(err);
       message.error("O'chirishda xato");
     } finally {
       setTableLoading(false);
@@ -141,60 +142,43 @@ const TeacherQuestions = () => {
   };
 
   const columns = [
-    { title: "ID", dataIndex: "id", key: "id", width: 80 },
+    { title: "ID", dataIndex: "id", key: "id", width: 60 },
     {
-      title: "Savol matni",
+      title: "Savol",
       dataIndex: "question",
       key: "question",
       ellipsis: true,
+      responsive: ["md"],
     },
     {
       title: "Turi",
       key: "type",
+      width: 100,
       render: (_, record) => (
         <Tag color={record.options ? "blue" : "green"}>
-          {record.options ? "Variantli" : "Matnli"}
+          {isMobile
+            ? record.options
+              ? "Var"
+              : "Matn"
+            : record.options
+            ? "Variantli"
+            : "Matnli"}
         </Tag>
       ),
-      width: 120,
-    },
-    {
-      title: "Variantlar soni",
-      key: "optionsCount",
-      render: (_, record) => (record.options ? record.options.length : "-"),
-      width: 120,
     },
     {
       title: "Kategoriya",
       key: "category",
-      width: 200,
-      render: (_, record) => (
-        <Space>
-          <span>{record.category?.name || "-"}</span>
-          {record.category && (
-            <Button
-              size="small"
-              icon={
-                copiedCategory === record.category.id ? (
-                  <CheckOutlined />
-                ) : (
-                  <CopyOutlined />
-                )
-              }
-              onClick={() => handleCopyCategoryLink(record.category)}
-              title={`"${record.category.name}" test havolasini nusxalash`}
-            />
-          )}
-        </Space>
-      ),
+      responsive: ["lg"],
+      render: (_, record) => record.category?.name || "-",
     },
     {
       title: "Amallar",
       key: "action",
-      fixed: "right",
-      width: 120,
+      fixed: isMobile ? false : "right",
+      width: 100,
       render: (_, record) => (
-        <Space size="middle">
+        <Space size={isMobile ? "small" : "middle"}>
           <Button
             icon={<EditOutlined />}
             size="small"
@@ -205,13 +189,13 @@ const TeacherQuestions = () => {
                 options: record.options || [],
                 correctAnswerIndex: record.correctAnswerIndex,
                 correctTextAnswer: record.correctTextAnswer,
-                categoryId: record.category.id,
+                categoryId: record.category?.id,
               });
               setIsModalOpen(true);
             }}
           />
           <Popconfirm
-            title="Savolni o'chirishni tasdiqlang"
+            title="O'chirishni tasdiqlang"
             onConfirm={() => handleDelete(record.id)}
             okText="Ha"
             cancelText="Yo'q"
@@ -225,30 +209,39 @@ const TeacherQuestions = () => {
 
   return (
     <div>
+      {/* Sarlavha va tugmalar */}
       <div
         style={{
-          marginBottom: 16,
+          marginBottom: 24,
           display: "flex",
+          flexDirection: isMobile ? "column" : "row",
           justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 8,
+          alignItems: isMobile ? "flex-start" : "center",
+          gap: 12,
         }}
       >
         <div>
-          <h2 style={{ margin: 0 }}>Savollar boshqaruvi</h2>
-          <p style={{ color: "#666", margin: 4, fontSize: 14 }}>
-            O'quvchilarga test linklarini quyidagi jadvaldan nusxalang
-          </p>
+          <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>
+            Savollar boshqaruvi
+          </Title>
+          <Text type="secondary"  style={{ fontSize: 13 }}>
+            <MobileOutlined style={{ marginRight: 4 }} />
+            O'quvchilarga linklarni quyidan nusxalang
+          </Text>
         </div>
 
-        <Space>
+        <Space
+          direction={isMobile ? "vertical" : "horizontal"}
+          size={12}
+          style={{ width: isMobile ? "100%" : "auto" }}
+        >
           <Button
             icon={<ShareAltOutlined />}
             onClick={handleCopyAllLinks}
             type={copiedAll ? "primary" : "default"}
+            block={isMobile}
           >
-            Barcha linklarni nusxalash
+            Barcha linklar
           </Button>
           <Button
             type="primary"
@@ -258,6 +251,7 @@ const TeacherQuestions = () => {
               form.resetFields();
               setIsModalOpen(true);
             }}
+            block={isMobile}
           >
             Yangi savol
           </Button>
@@ -268,87 +262,102 @@ const TeacherQuestions = () => {
         <Skeleton active />
       ) : (
         <>
-          {/* Kategoriyalar uchun qisqa va toza linklar */}
+          {/* Test linklari — mobil uchun kartochkalar */}
           {categories.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <h3 style={{ marginBottom: 12, color: "#1890ff" }}>
+            <div style={{ marginBottom: 32 }}>
+              <Title level={4} style={{ color: "#1890ff", marginBottom: 16 }}>
                 <LinkOutlined style={{ marginRight: 8 }} />
-                Test linklari (o'quvchilarga yuboring)
-              </h3>
-              <div
-                style={{
-                  background: "#f0f5ff",
-                  padding: 16,
-                  borderRadius: 8,
-                  border: "1px solid #bae7ff",
-                }}
-              >
+                Test havolalari
+              </Title>
+
+              <Space direction="vertical" size={12} style={{ width: "100%" }}>
                 {categories.map((cat) => {
                   const testUrl = getCategoryTestUrl(cat.id);
                   return (
-                    <div
+                    <Card
                       key={cat.id}
+                      size="small"
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "10px 14px",
-                        marginBottom: 8,
-                        background: "#fff",
-                        borderRadius: 8,
                         borderLeft: "4px solid #1890ff",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                       }}
+                      bodyStyle={{ padding: "12px 16px" }}
                     >
-                      <div>
-                        <strong style={{ fontSize: 15 }}>{cat.name}</strong>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginTop: 4,
-                            fontFamily: "monospace",
-                            wordBreak: "break-all",
-                          }}
-                        >
-                          {testUrl}
-                        </div>
-                      </div>
-                      <Button
-                        size="middle"
-                        type="primary"
-                        icon={
-                          copiedCategory === cat.id ? (
-                            <CheckOutlined />
-                          ) : (
-                            <CopyOutlined />
-                          )
-                        }
-                        onClick={() => handleCopyCategoryLink(cat)}
+                      <div
                         style={{
-                          minWidth: 90,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          gap: 12,
                         }}
                       >
-                        {copiedCategory === cat.id ? "Nusxalandi" : "Nusxalash"}
-                      </Button>
-                    </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontWeight: "bold",
+                              fontSize: 15,
+                              marginBottom: 4,
+                            }}
+                          >
+                            {cat.name}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              color: "#555",
+                              fontFamily: "monospace",
+                              wordBreak: "break-all",
+                              background: "#f5f5f5",
+                              padding: "6px 8px",
+                              borderRadius: 4,
+                            }}
+                          >
+                            {testUrl}
+                          </div>
+                        </div>
+                        <Button
+                          type="primary"
+                          size={isMobile ? "middle" : "middle"}
+                          icon={
+                            copiedCategory === cat.id ? (
+                              <CheckOutlined />
+                            ) : (
+                              <CopyOutlined />
+                            )
+                          }
+                          onClick={() => handleCopyCategoryLink(cat)}
+                        >
+                          {isMobile && copiedCategory === cat.id
+                            ? ""
+                            : isMobile
+                            ? "Nusxa"
+                            : "Nusxalash"}
+                        </Button>
+                      </div>
+                    </Card>
                   );
                 })}
-              </div>
+              </Space>
             </div>
           )}
 
+          {/* Jadval */}
           <Table
             columns={columns}
             dataSource={questions}
             rowKey="id"
             loading={tableLoading}
-            pagination={{ pageSize: 10 }}
-            scroll={{ x: 1200 }}
+            pagination={{
+              pageSize: isMobile ? 5 : 10,
+              showSizeChanger: !isMobile,
+            }}
+            scroll={{ x: isMobile ? 800 : 1200 }}
+            size={isMobile ? "small" : "middle"}
           />
         </>
       )}
 
+      {/* Modal — mobil uchun to'liq ekran */}
       <Modal
         title={editingQuestion ? "Savolni tahrirlash" : "Yangi savol qo'shish"}
         open={isModalOpen}
@@ -358,7 +367,13 @@ const TeacherQuestions = () => {
           setEditingQuestion(null);
         }}
         footer={null}
-        width={700}
+        width={isMobile ? "100%" : 700}
+        style={isMobile ? { top: 0, margin: 0 } : {}}
+        bodyStyle={
+          isMobile
+            ? { padding: "16px", maxHeight: "80vh", overflowY: "auto" }
+            : {}
+        }
       >
         <Form form={form} onFinish={handleSubmit} layout="vertical">
           <Form.Item
@@ -383,27 +398,22 @@ const TeacherQuestions = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item label="Javob variantlari (variantli savol uchun)">
+          <Form.Item label="Variantlar (ixtiyoriy)">
             <Form.List name="options">
               {(fields, { add, remove }) => (
                 <>
-                  {fields.map(({ key, name, ...restField }) => (
+                  {fields.map(({ key, name }) => (
                     <Space
                       key={key}
                       align="baseline"
-                      style={{
-                        display: "flex",
-                        marginBottom: 8,
-                        width: "100%",
-                      }}
+                      style={{ display: "flex", marginBottom: 8 }}
                     >
                       <Form.Item
-                        {...restField}
                         name={[name]}
                         rules={[
                           { required: true, message: "Variantni kiriting" },
                         ]}
-                        style={{ flex: 1 }}
+                        style={{ flex: 1, marginBottom: 0 }}
                       >
                         <Input placeholder={`Variant ${name + 1}`} />
                       </Form.Item>
@@ -430,36 +440,29 @@ const TeacherQuestions = () => {
             shouldUpdate={(prev, curr) => prev.options !== curr.options}
           >
             {({ getFieldValue }) => {
-              const hasOptions =
-                getFieldValue("options") &&
-                getFieldValue("options").some(
-                  (opt) => opt && opt.trim() !== ""
-                );
+              const hasOptions = getFieldValue("options")?.some((opt) =>
+                opt?.trim()
+              );
               return hasOptions ? (
                 <Form.Item
                   name="correctAnswerIndex"
-                  label="To'g'ri javob indeksi"
-                  rules={[
-                    { required: true, message: "To'g'ri javobni tanlang!" },
-                  ]}
+                  label="To'g'ri javob indeksi (0 dan boshlab)"
+                  rules={[{ required: true }]}
                 >
                   <InputNumber
                     min={0}
                     max={
-                      (getFieldValue("options") || []).filter(
-                        (o) => o && o.trim()
-                      ).length - 1
+                      (getFieldValue("options") || []).filter(Boolean).length -
+                      1
                     }
-                    placeholder="Masalan: 0"
+                    style={{ width: "100%" }}
                   />
                 </Form.Item>
               ) : (
                 <Form.Item
                   name="correctTextAnswer"
                   label="To'g'ri matnli javob"
-                  rules={[
-                    { required: true, message: "To'g'ri javobni kiriting!" },
-                  ]}
+                  rules={[{ required: true }]}
                 >
                   <TextArea
                     rows={2}
